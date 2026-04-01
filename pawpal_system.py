@@ -114,5 +114,4 @@ class Scheduler:
                 conflicts.append(task)
             else:
                 seen[task.time] = task
-        return conflicts</content>
-<parameter name="filePath">c:\Users\neba_\Documents\codepath\section 2\project 2\pawpal-starter\pawpal_system.py
+        return conflicts
