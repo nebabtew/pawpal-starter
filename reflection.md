@@ -2,15 +2,21 @@
 
 ## 1. System Design
 
+** core actions** :
+1. Add a pet (e.g., register a dog named Max with its owner)
+2. Schedule a task for a pet (e.g., schedule a walk at 8:00 AM)
+3. View today's tasks (e.g., see all tasks due today across all pets)
+
 **a. Initial design**
 
-- Briefly describe your initial UML design.
-- What classes did you include, and what responsibilities did you assign to each?
+- I designed four classes: Task holds a single activity's details (description, time, frequency, completion status). Pet stores pet info and maintains a list of tasks. Owner manages multiple pets and can aggregate all tasks. Scheduler is the brain  it retrieves, sorts, filters, and detects conflicts across all tasks for an owner.
 
 **b. Design changes**
 
 - Did your design change during implementation?
 - If yes, describe at least one change and why you made it.
+
+
 
 ---
 
