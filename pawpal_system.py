@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from typing import List, Dict
 
 
@@ -9,7 +9,9 @@ class Task:
     description: str
     time: str  # HH:MM format
     frequency: str  # daily/weekly/once
+    duration: int = 30  # duration in minutes
     completed: bool = False
+    date: str = field(default_factory=lambda: date.today().isoformat())  # YYYY-MM-DD format
 
     def mark_complete(self) -> None:
         """Mark the task as completed."""
@@ -66,19 +68,16 @@ class Scheduler:
         self.owner = owner
 
     def get_todays_tasks(self) -> List[Task]:
-        """Get today's tasks (by simple frequency rules)."""
-        now = datetime.now()
-        weekday = now.strftime("%A").lower()
+        """Get today's tasks (by date and frequency rules)."""
+        today = date.today().isoformat()
         valid = []
         for task in self.owner.get_all_tasks():
+            if task.date != today:
+                continue
             if task.completed:
                 continue
             freq = task.frequency.lower()
-            if freq == "daily":
-                valid.append(task)
-            elif freq == "weekly":
-                valid.append(task)
-            elif freq == "once":
+            if freq in ["daily", "weekly", "once"]:
                 valid.append(task)
         return self.sort_by_time(valid)
 
@@ -104,14 +103,51 @@ class Scheduler:
         return filtered
 
     def detect_conflicts(self, tasks: List[Task]) -> List[Task]:
-        """Detect tasks with duplicate times (simple conflict detection)."""
-        seen: Dict[str, Task] = {}
+        """Detect tasks with overlapping time ranges based on start time and duration."""
         conflicts: List[Task] = []
-        for task in tasks:
-            if task.time in seen:
-                if seen[task.time] not in conflicts:
-                    conflicts.append(seen[task.time])
-                conflicts.append(task)
-            else:
-                seen[task.time] = task
+        for i, task1 in enumerate(tasks):
+            start1 = datetime.strptime(task1.time, "%H:%M").time()
+            end1 = (datetime.combine(date.today(), start1) + timedelta(minutes=task1.duration)).time()
+            for j, task2 in enumerate(tasks):
+                if i >= j:
+                    continue
+                start2 = datetime.strptime(task2.time, "%H:%M").time()
+                end2 = (datetime.combine(date.today(), start2) + timedelta(minutes=task2.duration)).time()
+                # Check for overlap: task1 starts before task2 ends and task2 starts before task1 ends
+                if start1 < end2 and start2 < end1:
+                    if task1 not in conflicts:
+                        conflicts.append(task1)
+                    if task2 not in conflicts:
+                        conflicts.append(task2)
         return conflicts
+
+    def get_tomorrows_tasks(self) -> List[Task]:
+        """Get tomorrow's tasks (by date and frequency rules)."""
+        tomorrow = (date.today() + timedelta(days=1)).isoformat()
+        valid = []
+        for task in self.owner.get_all_tasks():
+            if task.date != tomorrow:
+                continue
+            if task.completed:
+                continue
+            freq = task.frequency.lower()
+            if freq in ["daily", "weekly", "once"]:
+                valid.append(task)
+        return self.sort_by_time(valid)
+
+    def mark_task_complete(self, task: Task, pet: Pet) -> None:
+        """Mark a task complete and create next occurrence if recurring."""
+        task.mark_complete()
+        if task.frequency in ["daily", "weekly"]:
+            current_date = date.fromisoformat(task.date)
+            if task.frequency == "daily":
+                next_date = current_date + timedelta(days=1)
+            else:
+                next_date = current_date + timedelta(days=7)
+            new_task = Task(
+                description=task.description,
+                time=task.time,
+                frequency=task.frequency,
+                date=next_date.isoformat()
+            )
+            pet.add_task(new_task)
